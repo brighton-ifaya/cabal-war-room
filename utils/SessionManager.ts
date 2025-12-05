@@ -4,7 +4,7 @@ import * as nacl from "tweetnacl";
 
 const SESSION_STORAGE_KEY = 'cabal_session_key';
 const SESSION_SIGNATURE_KEY = 'cabal_session_sig';
-const SESSION_EXPIRY_KEY = 'cabal_sessoin_expiry';
+const SESSION_EXPIRY_KEY = 'cabal_session_expiry';
 
 export class SessionManager {
     //check session validity

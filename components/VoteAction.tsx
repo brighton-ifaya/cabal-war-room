@@ -26,11 +26,10 @@ interface VotePayload {
 }
 
 export const VoteAction: React.FC = () => {
-	const { publicKey, connected, sendTransaction } = useWallet();
+	const { publicKey, connected, sendTransaction, signMessage } = useWallet();
 	const { connection } = useConnection();
 	const [voteChoice, setVoteChoice] = useState<"YES" | "NO">("YES");
 	const [isLoading, setIsLoading] = useState(false);
-	const { signMessage } = useWallet();
 	const [loadout, setLoadout] = useState<"SWORD" | "SHIELD">("SWORD");
 
 	const handleSendVote = async () => {
@@ -45,44 +44,44 @@ export const VoteAction: React.FC = () => {
 
 		setIsLoading(true);
 
-		const currentProposalTarget = "NORTH_CASTLE";
-		const proposalAction = "ATTACK";
-
-		const payload: VotePayload = {
-			a: proposalAction as "ATTACK" | "DEFEND" | "INVEST",
-			t: currentProposalTarget,
-			v: voteChoice,
-			ts: Date.now(),
-			l: loadout,
-		};
-
-		const jsonString = JSON.stringify(payload);
-		const messageBytes = naclUtil.decodeUTF8(jsonString);
-
-		const ephemeralKeyPair = nacl.box.keyPair();
-		const nonce = nacl.randomBytes(nacl.box.nonceLength);
-
-		const encryptedMessage = nacl.box(
-			messageBytes,
-			nonce,
-			GAME_MASTER_PUBLIC_KEY,
-			ephemeralKeyPair.secretKey,
-		);
-
-		const memoContent = [
-			naclUtil.encodeBase64(ephemeralKeyPair.publicKey),
-			naclUtil.encodeBase64(nonce),
-			naclUtil.encodeBase64(encryptedMessage),
-		].join("|");
-
-		const transaction = new Transaction();
-
-		//the vote
-		transaction.add(
-			createMemoInstruction(memoContent, [sessionKeypair.publicKey]),
-		);
-
 		try {
+			const currentProposalTarget = "NORTH_CASTLE";
+			const proposalAction = "ATTACK";
+
+			const payload: VotePayload = {
+				a: proposalAction as "ATTACK" | "DEFEND" | "INVEST",
+				t: currentProposalTarget,
+				v: voteChoice,
+				ts: Date.now(),
+				l: loadout,
+			};
+
+			const jsonString = JSON.stringify(payload);
+			const messageBytes = naclUtil.decodeUTF8(jsonString);
+
+			const ephemeralKeyPair = nacl.box.keyPair();
+			const nonce = nacl.randomBytes(nacl.box.nonceLength);
+
+			const encryptedMessage = nacl.box(
+				messageBytes,
+				nonce,
+				GAME_MASTER_PUBLIC_KEY,
+				ephemeralKeyPair.secretKey,
+			);
+
+			const memoContent = [
+				naclUtil.encodeBase64(ephemeralKeyPair.publicKey),
+				naclUtil.encodeBase64(nonce),
+				naclUtil.encodeBase64(encryptedMessage),
+			].join(":");
+
+			const transaction = new Transaction();
+
+			//the vote
+			transaction.add(
+				createMemoInstruction(memoContent, [sessionKeypair.publicKey]),
+			);
+
 			//auto signer
 			console.log("Sending vote via Session Key...");
 			const txId = await SessionManager.sendSessionTransaction(
@@ -95,9 +94,9 @@ export const VoteAction: React.FC = () => {
 		} catch (err) {
 			console.error("Auto-sign failed:", err);
 			alert("Failed to send vote or expired session. Try logging in again.");
+		} finally {
+			setIsLoading(false);
 		}
-
-		setIsLoading(false);
 	};
 
 	const handleStartSession = async () => {
@@ -128,7 +127,7 @@ export const VoteAction: React.FC = () => {
 	};
 
 	return (
-		<div className="mt-10 p-6 border border-gray-700 rounded-lg bg-gray-900 shadow-2xl text-white max-w-md -w-full">
+		<div className="mt-10 p-6 border border-gray-700 rounded-lg bg-gray-900 shadow-2xl text-white max-w-md w-full">
 			<h2 className="text-2xl font-bold mb-6 text-center text-yellow-500">
 				CAST VOTE
 			</h2>
@@ -161,7 +160,7 @@ export const VoteAction: React.FC = () => {
 							Select Loadout
 						</p>
 						{/* Equipment buttons */}
-						<div className="grid drid-cols-2 gap-4 mb-6">
+						<div className="grid grid-cols-2 gap-4 mb-6">
 							<button
 								onClick={() => setLoadout("SWORD")}
 								className={`p-4 rounded border transition-all ${
@@ -191,7 +190,7 @@ export const VoteAction: React.FC = () => {
 							className={`w-full py-4 text-xl font-black rounded tracking-widest uppercase transition-all ${
 								isLoading
 									? "bg-gray-600 cursor-not-allowed"
-									: "bg-green-500 hover:bg-green-400 text-black shadow-[0_0_20px-rbga(34,197,94,0.6)]"
+									: "bg-green-500 hover:bg-green-400 text-black shadow-[0_0_20px_rgba(34,197,94,0.6)]"
 							}`}>
 							{isLoading ? "ENCRYPTING..." : "CONFIRM ATTACK"}
 						</button>
