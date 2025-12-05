@@ -101,6 +101,7 @@ export const VoteAction: React.FC = () => {
 
 	const handleStartSession = async () => {
 		if (!signMessage || !publicKey || !sendTransaction) return;
+		setIsLoading(true);
 		try {
 			const sessionKeypair = await SessionManager.createSession(signMessage);
 			const transferTx = new Transaction().add(
@@ -123,6 +124,9 @@ export const VoteAction: React.FC = () => {
 			// setsessionActive(true);
 		} catch (err) {
 			console.error("Session failed to start:", err);
+			alert("Failed to start session. Please try again.");
+		} finally {
+			setIsLoading(false);
 		}
 	};
 
@@ -165,7 +169,7 @@ export const VoteAction: React.FC = () => {
 								onClick={() => setLoadout("SWORD")}
 								className={`p-4 rounded border transition-all ${
 									loadout === "SWORD"
-										? "bg-red-600 border-red-400 shadow-[0_015px_rgba(220,38,38,0.5)]"
+										? "bg-red-600 border-red-400 shadow-[0_0_15px_rgba(220,38,38,0.5)]"
 										: "bg-gray-800 border-gray-700 opacity-50 hover:opacity-100"
 								}`}>
 								<div className="text-2xl mb-1">🗡️</div>
@@ -176,7 +180,7 @@ export const VoteAction: React.FC = () => {
 								onClick={() => setLoadout("SHIELD")}
 								className={`p-4 rounded border transition-all ${
 									loadout === "SHIELD"
-										? "bg-blue-600 border-blue-400 shadow-[0_0_15px_rgba(37, 99, 235, 0.5)]"
+										? "bg-blue-600 border-blue-400 shadow-[0_0_15px_rgba(37,99,235,0.5)]"
 										: "bg-gray-800 border-gray-700 opacity-50 hover:opacity-100"
 								}`}>
 								<div className="text-2xl mb-1">🛡️</div>
