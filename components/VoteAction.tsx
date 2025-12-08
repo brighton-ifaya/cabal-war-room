@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import * as nacl from "tweetnacl";
 import * as naclUtil from "tweetnacl-util";
@@ -14,8 +14,8 @@ import {
 
 import { GAME_MASTER_PUBLIC_KEY, GAME_MASTER_ADDRESS } from "@/constants";
 import { SessionManager } from "@/utils/SessionManager";
-import { send } from "process";
-import { Session } from "inspector/promises";
+// import { send } from "process";
+// import { Session } from "inspector/promises";
 
 interface VotePayload {
 	a: "ATTACK" | "DEFEND" | "INVEST";
@@ -31,6 +31,27 @@ export const VoteAction: React.FC = () => {
 	const [voteChoice, setVoteChoice] = useState<"YES" | "NO">("YES");
 	const [isLoading, setIsLoading] = useState(false);
 	const [loadout, setLoadout] = useState<"SWORD" | "SHIELD">("SWORD");
+	const [sessionBalance, setSessionBalance] = useState<number | null>(null);
+
+	const refreshBalance = useCallback(async () => {
+		const session = SessionManager.getSession();
+		if (session && connection) {
+			try {
+				const bal = await connection.getBalance(session.keypair.publicKey);
+				setSessionBalance(bal / LAMPORTS_PER_SOL);
+			} catch (e) {
+				console.error("Failed to fetch session balance:", e);
+			}
+		} else {
+			setSessionBalance(null);
+		}
+	}, [connection]);
+
+	useEffect(() => {
+		refreshBalance();
+		const interval = setInterval(refreshBalance, 30000); // Refresh every 30s
+		return () => clearInterval(interval);
+	}, [refreshBalance]);
 
 	const handleSendVote = async () => {
 		const session = SessionManager.getSession();
@@ -39,6 +60,12 @@ export const VoteAction: React.FC = () => {
 			return;
 		}
 		const { keypair: sessionKeypair } = session;
+
+		//funds check
+		if (sessionBalance !== null && sessionBalance < 0.005) {
+			alert("Session account has insufficient funds. Please restart session.");
+			return;
+		}
 
 		if (!publicKey || !connection || isLoading) return;
 
@@ -91,9 +118,13 @@ export const VoteAction: React.FC = () => {
 
 			console.log("Vote Cast! Tx Hash:", txId);
 			alert("Vote Sent! (Check console for hash)");
-		} catch (err) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		} catch (err: any) {
 			console.error("Auto-sign failed:", err);
-			alert("Failed to send vote or expired session. Try logging in again.");
+			if (err.logs) {
+				console.error("Transaction Logs:", err.logs);
+			}
+			alert(`Vote Failed: ${err.message ? err.message : "Unkown error"}`);
 		} finally {
 			setIsLoading(false);
 		}
@@ -120,8 +151,7 @@ export const VoteAction: React.FC = () => {
 				"Session active and funded! You can now vote without signing each time.",
 			);
 
-			//todo: force rerender to update UI state
-			// setsessionActive(true);
+			setTimeout(refreshBalance, 1000);
 		} catch (err) {
 			console.error("Session failed to start:", err);
 			alert("Failed to start session. Please try again.");
@@ -131,7 +161,17 @@ export const VoteAction: React.FC = () => {
 	};
 
 	return (
-		<div className="mt-10 p-6 border border-gray-700 rounded-lg bg-gray-900 shadow-2xl text-white max-w-md w-full">
+		<div className="mt-10 p-6 border border-gray-700 rounded-lg bg-gray-900 shadow-2xl text-white max-w-md w-full relative">
+			{sessionBalance !== null && (
+				<div
+					className={`absolute top-4 right-4 text-xs font-mono px-2 py-1 rounded border ${
+						sessionBalance < 0.002
+							? "bg-red-900/50 border-red-500 text-red-200"
+							: "bg-green-900/50 border-green-500 text-green-200"
+					}`}>
+					⛽️ {sessionBalance.toFixed(4)} SOL
+				</div>
+			)}
 			<h2 className="text-2xl font-bold mb-6 text-center text-yellow-500">
 				CAST VOTE
 			</h2>
@@ -151,8 +191,9 @@ export const VoteAction: React.FC = () => {
 					<button
 						onClick={handleStartSession}
 						className="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded font-bold transition-all shadow-lg hover:shadow-purple-500/50">
-						Start Session
+						{sessionBalance !== null ? "♻️ Top up session" : "🔑 Start Session"}
 					</button>
+
 					<p className="text-xs text-center text-gray-500">
 						(Authorize background signing + funds 0.02 SOL gas)
 					</p>
