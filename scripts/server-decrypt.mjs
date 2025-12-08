@@ -16,10 +16,10 @@ if (!SECRET_KEY_STRING) {
 }
 
 // console.log("Debug: Reading Key...");
-// const secretKeyBytes = naclUtil.decodeBase64(SECRET_KEY_STRING);
+const secretKeyBytes = naclUtil.decodeBase64(SECRET_KEY_STRING);
 // console.log("Debug: Secret Key Bytes Length:", secretKeyBytes.length);
 
-// const encryptionKeyPair = nacl.box.keyPair.fromSecretKey(secretKeyBytes);
+const encryptionKeyPair = nacl.box.keyPair.fromSecretKey(secretKeyBytes);
 // console.log("Debug: Generated KeyPair:", encryptionKeyPair);
 
 if (!encryptionKeyPair || !encryptionKeyPair.publicKey) {
