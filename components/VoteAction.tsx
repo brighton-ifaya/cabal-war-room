@@ -14,8 +14,6 @@ import {
 
 import { GAME_MASTER_PUBLIC_KEY, GAME_MASTER_ADDRESS } from "@/constants";
 import { SessionManager } from "@/utils/SessionManager";
-// import { send } from "process";
-// import { Session } from "inspector/promises";
 
 interface VotePayload {
 	a: "ATTACK" | "DEFEND" | "INVEST";
@@ -124,7 +122,7 @@ export const VoteAction: React.FC = () => {
 			if (err.logs) {
 				console.error("Transaction Logs:", err.logs);
 			}
-			alert(`Vote Failed: ${err.message ? err.message : "Unkown error"}`);
+			alert(`Vote Failed: ${err.message ? err.message : "Unknown error"}`);
 		} finally {
 			setIsLoading(false);
 		}
@@ -151,7 +149,7 @@ export const VoteAction: React.FC = () => {
 				"Session active and funded! You can now vote without signing each time.",
 			);
 
-			setTimeout(refreshBalance, 1000);
+			await refreshBalance();
 		} catch (err) {
 			console.error("Session failed to start:", err);
 			alert("Failed to start session. Please try again.");
@@ -165,7 +163,7 @@ export const VoteAction: React.FC = () => {
 			{sessionBalance !== null && (
 				<div
 					className={`absolute top-4 right-4 text-xs font-mono px-2 py-1 rounded border ${
-						sessionBalance < 0.002
+						sessionBalance < 0.005
 							? "bg-red-900/50 border-red-500 text-red-200"
 							: "bg-green-900/50 border-green-500 text-green-200"
 					}`}>

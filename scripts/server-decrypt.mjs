@@ -15,12 +15,12 @@ if (!SECRET_KEY_STRING) {
 	process.exit(1);
 }
 
-console.log("Debug: Reading Key...");
-const secretKeyBytes = naclUtil.decodeBase64(SECRET_KEY_STRING);
-console.log("Debug: Secret Key Bytes Length:", secretKeyBytes.length);
+// console.log("Debug: Reading Key...");
+// const secretKeyBytes = naclUtil.decodeBase64(SECRET_KEY_STRING);
+// console.log("Debug: Secret Key Bytes Length:", secretKeyBytes.length);
 
-const encryptionKeyPair = nacl.box.keyPair.fromSecretKey(secretKeyBytes);
-console.log("Debug: Generated KeyPair:", encryptionKeyPair);
+// const encryptionKeyPair = nacl.box.keyPair.fromSecretKey(secretKeyBytes);
+// console.log("Debug: Generated KeyPair:", encryptionKeyPair);
 
 if (!encryptionKeyPair || !encryptionKeyPair.publicKey) {
 	throw new Error(
@@ -43,6 +43,13 @@ const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
 function decryptPayload(memoString) {
 	try {
 		const [ephemPubKeyStr, nonceStr, cipherTextStr] = memoString.split(":");
+
+		if (!ephemPubKeyStr || !nonceStr || !cipherTextStr) {
+			console.error(
+				"Malformed memo: expected format 'ephemPubKey:nonce:cipherText'",
+			);
+			return null;
+		}
 
 		const ephemPubKey = naclUtil.decodeBase64(ephemPubKeyStr);
 		const nonce = naclUtil.decodeBase64(nonceStr);
@@ -77,9 +84,15 @@ connection.onLogs(
 			const signature = logs.signature;
 			console.log(`\n🔔 New transaction detected: ${signature.slice(0, 8)}`);
 
+			//small delay to allow transaction to finalize
+			await new Promise((res) => setTimeout(res, 500));
 			const tx = await connection.getTransaction(signature, {
 				maxSupportedTransactionVersion: 0,
 			});
+			if (!tx) {
+				console.log("⏳ Transaction not found yet, skipping...");
+				return;
+			}
 			if (tx && tx.meta && tx.meta.logMessages) {
 				//find memo instructions in log messages
 				//the spl memo program logs data directly
